@@ -1,0 +1,43 @@
+{
+  "survey_id": "random_esm",
+  "title": "Daytime Experience Sampling",
+  "description": "Momentary snapshot of attention, mood, and immediate social context.",
+  "notification_prompt": {
+    "title": "Quick Moment Check-in",
+    "body": "Please take 30 seconds to record your current state and surroundings."
+  },
+  "weight": 1.2,
+  "is_active": true,
+  "questions": [
+    {
+      "question_id": "q_current_focus",
+      "prompt": "How focused are you on your current activity?",
+      "type": "rating_scale",
+      "is_required": true,
+      "validation_rules": {
+        "min_value": 1,
+        "max_value": 7,
+        "step": 1,
+        "min_label": "Completely Distracted",
+        "max_label": "Deeply Focused"
+      }
+    },
+    {
+      "question_id": "q_current_activity",
+      "prompt": "What are you primarily engaged in right now?",
+      "type": "single_choice",
+      "is_required": true,
+      "validation_rules": {
+        "options": [
+          "Work / Studying",
+          "Eating / Drinking",
+          "Socializing",
+          "Relaxing / Media Consumption",
+          "Commuting / Traveling",
+          "Exercise / Chores",
+          "Other"
+        ]
+      }
+    }
+  ]
+}

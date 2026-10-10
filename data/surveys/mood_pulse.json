@@ -1,0 +1,39 @@
+{
+  "survey_id": "mood_pulse",
+  "title": "Mood Pulse",
+  "description": "Rapid pulse survey measuring affective valence and energy.",
+  "notification_prompt": {
+    "title": "Mood Pulse",
+    "body": "How are you feeling right now? Tap to log a quick mood pulse."
+  },
+  "weight": 1.0,
+  "is_active": true,
+  "questions": [
+    {
+      "question_id": "q_valence",
+      "prompt": "Current mood valence:",
+      "type": "rating_scale",
+      "is_required": true,
+      "validation_rules": {
+        "min_value": 1,
+        "max_value": 5,
+        "step": 1,
+        "min_label": "Negative",
+        "max_label": "Positive"
+      }
+    },
+    {
+      "question_id": "q_arousal",
+      "prompt": "Current energy / alertness level:",
+      "type": "rating_scale",
+      "is_required": true,
+      "validation_rules": {
+        "min_value": 1,
+        "max_value": 5,
+        "step": 1,
+        "min_label": "Lethargic",
+        "max_label": "High Energy"
+      }
+    }
+  ]
+}

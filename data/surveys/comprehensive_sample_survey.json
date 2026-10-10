@@ -1,0 +1,81 @@
+{
+  "survey_id": "comprehensive_sample_survey",
+  "title": "Comprehensive Experience Sampling Survey",
+  "description": "Daily sample prompt showcasing all available question types and validation rules.",
+  "notification_prompt": {
+    "title": "Quick Survey Check-in",
+    "body": "Please take a moment to record your current state and snap a surroundings photo."
+  },
+  "weight": 1.5,
+  "is_active": true,
+  "questions": [
+    {
+      "question_id": "q_mood_scale",
+      "prompt": "How are you feeling right now on a scale from 1 (very negative) to 10 (very positive)?",
+      "type": "rating_scale",
+      "is_required": true,
+      "validation_rules": {
+        "min_value": 1,
+        "max_value": 10,
+        "step": 1,
+        "min_label": "Very Negative",
+        "max_label": "Very Positive"
+      }
+    },
+    {
+      "question_id": "q_current_location_type",
+      "prompt": "Where are you currently located?",
+      "type": "single_choice",
+      "is_required": true,
+      "validation_rules": {
+        "options": [
+          "Home",
+          "Workplace / Office",
+          "School / University",
+          "Transit / Commuting",
+          "Outdoors / Nature",
+          "Other"
+        ]
+      }
+    },
+    {
+      "question_id": "q_social_context",
+      "prompt": "Who is currently with you? (Select all that apply):",
+      "type": "multiple_choice",
+      "is_required": false,
+      "validation_rules": {
+        "options": [
+          "Alone",
+          "Colleagues / Classmates",
+          "Friends",
+          "Family / Partner",
+          "Strangers"
+        ],
+        "min_selections": 1,
+        "max_selections": 4
+      }
+    },
+    {
+      "question_id": "q_activity_notes",
+      "prompt": "Briefly describe what you were doing immediately before this notification:",
+      "type": "text",
+      "is_required": false,
+      "validation_rules": {
+        "min_length": 0,
+        "max_length": 300,
+        "placeholder": "e.g., Reading research papers in the library."
+      }
+    },
+    {
+      "question_id": "q_hours_slept",
+      "prompt": "How many hours of sleep did you get last night?",
+      "type": "numeric",
+      "is_required": true,
+      "validation_rules": {
+        "min_value": 0.0,
+        "max_value": 24.0,
+        "allow_decimals": true
+      }
+    }
+  ]
+}

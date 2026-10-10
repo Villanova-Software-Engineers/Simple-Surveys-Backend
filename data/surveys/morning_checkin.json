@@ -1,0 +1,47 @@
+{
+  "survey_id": "morning_checkin",
+  "title": "Morning Check-in",
+  "description": "Start-of-day survey on sleep quality, readiness, and morning mood.",
+  "notification_prompt": {
+    "title": "Morning Check-in",
+    "body": "Good morning! Please log your start-of-day state."
+  },
+  "weight": 1.0,
+  "is_active": true,
+  "questions": [
+    {
+      "question_id": "q_morning_readiness",
+      "prompt": "How ready and energetic do you feel this morning?",
+      "type": "rating_scale",
+      "is_required": true,
+      "validation_rules": {
+        "min_value": 1,
+        "max_value": 7,
+        "step": 1,
+        "min_label": "Exhausted",
+        "max_label": "Fully Energized"
+      }
+    },
+    {
+      "question_id": "q_sleep_duration",
+      "prompt": "Total hours of sleep last night:",
+      "type": "numeric",
+      "is_required": true,
+      "validation_rules": {
+        "min_value": 0.0,
+        "max_value": 24.0,
+        "allow_decimals": true
+      }
+    },
+    {
+      "question_id": "q_morning_goal",
+      "prompt": "What is your main priority or focus for today?",
+      "type": "text",
+      "is_required": false,
+      "validation_rules": {
+        "max_length": 250,
+        "placeholder": "e.g., Complete project milestone analysis"
+      }
+    }
+  ]
+}

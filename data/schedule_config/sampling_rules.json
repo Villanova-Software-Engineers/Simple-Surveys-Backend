@@ -1,0 +1,37 @@
+{
+  "mode": "hybrid",
+  "time_to_complete_minutes": 5,
+  "daily_schedule": {
+    "overall_window": {
+      "start_time": "08:00",
+      "end_time": "22:00"
+    },
+    "first_window": {
+      "start_time": "08:00",
+      "end_time": "09:30"
+    },
+    "last_window": {
+      "start_time": "20:30",
+      "end_time": "22:00"
+    }
+  },
+  "fixed_surveys": [
+    {
+      "survey_id": "morning_checkin",
+      "position": "first"
+    },
+    {
+      "survey_id": "night_survey",
+      "position": "last"
+    }
+  ],
+  "randomized_sampling": {
+    "prompts_per_day": 4,
+    "min_interval_minutes": 90,
+    "eligible_survey_ids": [
+      "comprehensive_sample_survey",
+      "mood_pulse",
+      "social_interaction_check"
+    ]
+  }
+}

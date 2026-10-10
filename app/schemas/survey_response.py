@@ -1,0 +1,57 @@
+"""Survey response schemas and record models."""
+
+from datetime import datetime
+from typing import Any, List, Literal, Optional
+from pydantic import BaseModel, ConfigDict, Field
+from app.schemas.common import ImageMetadata, LocationCoordinates, TemporalMarkers
+
+ResponseStatus = Literal["COMPLETED", "EXPIRED"]
+
+
+class AnswerItem(BaseModel):
+    """A single answered question item."""
+    model_config = ConfigDict(extra="ignore")
+
+    question_id: str = Field(..., description="Target question identifier")
+    value: Any = Field(..., description="Answer value (number, string, list, etc.)")
+
+
+class SurveyResponseCreate(BaseModel):
+    """Payload incoming from participant device for survey submission."""
+    model_config = ConfigDict(extra="ignore")
+
+    survey_id: str = Field(..., description="Identifier of the survey answered")
+    notification_sent_at: datetime = Field(..., description="Timestamp when notification prompt was dispatched")
+    started_at: Optional[datetime] = Field(None, description="Timestamp when user began answering")
+    completed_at: Optional[datetime] = Field(None, description="Timestamp when survey was completed")
+    location: Optional[LocationCoordinates] = Field(None, description="Geographic location details")
+    answers: List[AnswerItem] = Field(default_factory=list, description="Answered survey questions")
+    response_id: Optional[str] = Field(None, description="Optional client-generated response ID")
+
+
+class SurveyResponseRecord(BaseModel):
+    """Full persisted response record saved to data/responses/{survey_id}/data/."""
+    model_config = ConfigDict(extra="ignore")
+
+    response_id: str = Field(..., description="Unique response identifier (resp_{id})")
+    survey_id: str = Field(..., description="Identifier of the survey answered")
+    status: ResponseStatus = Field(..., description="Completion or expiration status")
+    status_message: str = Field(..., description="Descriptive status note")
+    temporal_markers: TemporalMarkers = Field(..., description="Audit markers for dispatch, latency, and duration")
+    location: Optional[LocationCoordinates] = Field(None, description="Participant location coordinates")
+    image: ImageMetadata = Field(default_factory=ImageMetadata, description="Associated captured photo metadata")
+    answers: List[AnswerItem] = Field(default_factory=list, description="Submitted answers (empty if EXPIRED)")
+
+
+class SurveyResponseSubmissionResult(BaseModel):
+    """HTTP response returned to the client upon submitting a survey."""
+    model_config = ConfigDict(extra="ignore")
+
+    response_id: str = Field(..., description="Unique response identifier")
+    survey_id: str = Field(..., description="Identifier of the submitted survey")
+    status: ResponseStatus = Field(..., description="COMPLETED or EXPIRED")
+    status_message: Optional[str] = Field(None, description="Status detail message")
+    message: Optional[str] = Field(None, description="Alias for status detail message")
+    image_stored: bool = Field(False, description="Whether an uploaded image was persisted")
+    image_filename: Optional[str] = Field(None, description="Persisted image filename if stored")
+    received_at: datetime = Field(..., description="Timestamp when server received submission")

@@ -1,0 +1,50 @@
+{
+  "survey_id": "night_survey",
+  "title": "Evening Reflection",
+  "description": "End-of-day reflection on daily accomplishments and evening well-being.",
+  "notification_prompt": {
+    "title": "Evening Reflection",
+    "body": "Good evening! Please complete your daily reflection before heading to bed."
+  },
+  "weight": 1.0,
+  "is_active": true,
+  "questions": [
+    {
+      "question_id": "q_day_satisfaction",
+      "prompt": "How satisfied are you with how your day went overall?",
+      "type": "rating_scale",
+      "is_required": true,
+      "validation_rules": {
+        "min_value": 1,
+        "max_value": 10,
+        "step": 1,
+        "min_label": "Very Dissatisfied",
+        "max_label": "Extremely Satisfied"
+      }
+    },
+    {
+      "question_id": "q_evening_fatigue",
+      "prompt": "Current level of fatigue or tiredness:",
+      "type": "single_choice",
+      "is_required": true,
+      "validation_rules": {
+        "options": [
+          "Not tired at all",
+          "Mildly tired",
+          "Moderately tired",
+          "Very exhausted"
+        ]
+      }
+    },
+    {
+      "question_id": "q_evening_highlights",
+      "prompt": "What was the highlight or biggest challenge of today?",
+      "type": "text",
+      "is_required": false,
+      "validation_rules": {
+        "max_length": 350,
+        "placeholder": "Reflect on a memorable moment or accomplishment."
+      }
+    }
+  ]
+}
