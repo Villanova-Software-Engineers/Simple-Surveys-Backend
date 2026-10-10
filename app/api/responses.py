@@ -22,6 +22,47 @@ from app.schemas.survey_response import (
 router = APIRouter(prefix="/responses", tags=["Responses"])
 
 
+@router.get("", response_model=List[SurveyResponseRecord])
+async def list_responses(
+    storage_repo: StorageRepoDep,
+    survey_id: Optional[str] = Query(None, description="Optional survey_id filter"),
+) -> List[SurveyResponseRecord]:
+    """Retrieve persisted response records."""
+    return await storage_repo.list_responses(survey_id=survey_id)
+
+
+@router.get("/{survey_id}/{response_id}", response_model=SurveyResponseRecord)
+async def get_response(
+    survey_id: str,
+    response_id: str,
+    storage_repo: StorageRepoDep,
+) -> SurveyResponseRecord:
+    """Retrieve a specific response record."""
+    record = await storage_repo.get_response(survey_id, response_id)
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Response '{response_id}' for survey '{survey_id}' not found.",
+        )
+    return record
+
+
+@router.get("/{survey_id}/images/{filename}")
+async def get_response_image(
+    survey_id: str,
+    filename: str,
+    storage_repo: StorageRepoDep,
+) -> FileResponse:
+    """Download an uploaded survey response photo."""
+    image_path = await storage_repo.get_image_path(survey_id, filename)
+    if not image_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Image '{filename}' not found for survey '{survey_id}'.",
+        )
+    return FileResponse(image_path)
+
+
 @router.post("", response_model=SurveyResponseSubmissionResult)
 async def submit_response(
     request: Request,
@@ -67,7 +108,6 @@ async def submit_response(
                 detail=f"Invalid JSON request body: {e}",
             )
 
-    # Validate survey existence
     survey = await storage_repo.get_survey(submission.survey_id)
     if not survey:
         raise HTTPException(
@@ -75,15 +115,12 @@ async def submit_response(
             detail=f"Survey '{submission.survey_id}' does not exist.",
         )
 
-    # Establish response identifier
     response_id = submission.response_id or f"resp_{uuid.uuid4().hex[:8]}"
     received_at = datetime.now(timezone.utc)
 
-    # Determine time-to-complete limit
     schedule_config = await storage_repo.get_schedule_config()
     time_limit_minutes = schedule_config.time_to_complete_minutes
 
-    # Evaluate expiration
     res_status, status_message, is_expired, temporal_markers = (
         scheduler_service.evaluate_response_expiration(
             submission=submission,
@@ -92,11 +129,9 @@ async def submit_response(
         )
     )
 
-    # Compute matched filename timestamp string
     anchor_dt = submission.completed_at or received_at
     timestamp_str = format_filename_timestamp(anchor_dt)
 
-    # Handle image upload if provided
     image_metadata = ImageMetadata(has_image=False)
     image_stored = False
     stored_img_filename: Optional[str] = None
@@ -112,7 +147,7 @@ async def submit_response(
                 image_bytes=image_bytes,
                 extension=ext,
             )
-            # Image ID mirrors response ID
+
             img_id = "img_" + response_id[5:] if response_id.startswith("resp_") else f"img_{response_id}"
             image_metadata = ImageMetadata(
                 has_image=True,
@@ -125,7 +160,6 @@ async def submit_response(
     # Assemble answers: empty if expired, otherwise retain user answers
     final_answers = [] if is_expired else submission.answers
 
-    # Assemble and persist record
     record = SurveyResponseRecord(
         response_id=response_id,
         survey_id=submission.survey_id,
@@ -138,7 +172,6 @@ async def submit_response(
     )
     await storage_repo.save_response(record, timestamp_str=timestamp_str)
 
-    # Response payload according to Section 9.3
     if is_expired:
         response_payload = SurveyResponseSubmissionResult(
             response_id=response_id,
@@ -169,44 +202,3 @@ async def submit_response(
         status_code=status.HTTP_201_CREATED,
         content=response_payload.model_dump(mode="json"),
     )
-
-
-@router.get("", response_model=List[SurveyResponseRecord])
-async def list_responses(
-    storage_repo: StorageRepoDep,
-    survey_id: Optional[str] = Query(None, description="Optional survey_id filter"),
-) -> List[SurveyResponseRecord]:
-    """Retrieve persisted response records."""
-    return await storage_repo.list_responses(survey_id=survey_id)
-
-
-@router.get("/{survey_id}/{response_id}", response_model=SurveyResponseRecord)
-async def get_response(
-    survey_id: str,
-    response_id: str,
-    storage_repo: StorageRepoDep,
-) -> SurveyResponseRecord:
-    """Retrieve a specific response record."""
-    record = await storage_repo.get_response(survey_id, response_id)
-    if not record:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Response '{response_id}' for survey '{survey_id}' not found.",
-        )
-    return record
-
-
-@router.get("/{survey_id}/images/{filename}")
-async def get_response_image(
-    survey_id: str,
-    filename: str,
-    storage_repo: StorageRepoDep,
-) -> FileResponse:
-    """Download an uploaded survey response photo."""
-    image_path = await storage_repo.get_image_path(survey_id, filename)
-    if not image_path:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Image '{filename}' not found for survey '{survey_id}'.",
-        )
-    return FileResponse(image_path)

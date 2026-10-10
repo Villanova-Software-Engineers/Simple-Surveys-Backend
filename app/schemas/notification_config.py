@@ -5,7 +5,7 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 SamplingMode = Literal["hybrid", "all_random", "all_fixed"]
-DevicePlatform = Literal["ios", "android", "web", "other"]
+DevicePlatform = Literal["ios", "android"]
 
 
 class TimeWindow(BaseModel):

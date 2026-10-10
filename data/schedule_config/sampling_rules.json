@@ -18,11 +18,13 @@
   "fixed_surveys": [
     {
       "survey_id": "morning_checkin",
-      "position": "first"
+      "position": "first",
+      "scheduled_time": null
     },
     {
       "survey_id": "night_survey",
-      "position": "last"
+      "position": "last",
+      "scheduled_time": null
     }
   ],
   "randomized_sampling": {

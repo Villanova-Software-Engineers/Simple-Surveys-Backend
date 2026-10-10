@@ -20,20 +20,12 @@ async def get_schedule(
     return await storage_repo.get_schedule_config()
 
 
-@router.put("/schedule", response_model=SamplingRules)
-async def update_schedule(
-    payload: SamplingRules,
+@router.get("/devices", response_model=List[DeviceRegistration])
+async def list_devices(
     storage_repo: StorageRepoDep,
-    scheduler_service: SchedulerServiceDep,
-) -> SamplingRules:
-    """
-    Admin endpoint to update daily sampling rules.
-    Immediately recalculates and re-registers daily scheduler jobs.
-    """
-    updated_rules = await storage_repo.save_schedule_config(payload)
-    # Refresh scheduled jobs for today
-    await scheduler_service.schedule_daily_jobs()
-    return updated_rules
+) -> List[DeviceRegistration]:
+    """Retrieve list of all registered devices."""
+    return await storage_repo.list_devices()
 
 
 @router.post("/devices", response_model=DeviceRegistrationResponse)
@@ -51,9 +43,17 @@ async def register_device(
     )
 
 
-@router.get("/devices", response_model=List[DeviceRegistration])
-async def list_devices(
+@router.put("/schedule", response_model=SamplingRules)
+async def update_schedule(
+    payload: SamplingRules,
     storage_repo: StorageRepoDep,
-) -> List[DeviceRegistration]:
-    """Retrieve list of all registered devices."""
-    return await storage_repo.list_devices()
+    scheduler_service: SchedulerServiceDep,
+) -> SamplingRules:
+    """
+    Admin endpoint to update daily sampling rules.
+    Immediately recalculates and re-registers daily scheduler jobs.
+    """
+    updated_rules = await storage_repo.save_schedule_config(payload)
+    # Refresh scheduled jobs for today
+    await scheduler_service.schedule_daily_jobs()
+    return updated_rules

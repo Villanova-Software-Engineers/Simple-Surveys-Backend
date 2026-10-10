@@ -1,12 +1,13 @@
 """Survey management endpoints."""
 
-from typing import List, Optional
+from typing import List
 from fastapi import APIRouter, HTTPException, Query, status
-from app.dependencies import StorageRepoDep
+from app.dependencies import SchedulerServiceDep, StorageRepoDep
 from app.schemas.survey_config import (
     SurveyConfig,
     SurveyConfigCreate,
     SurveyConfigUpdate,
+    SurveyDeleteResponse,
 )
 
 router = APIRouter(prefix="/surveys", tags=["Surveys"])
@@ -55,7 +56,7 @@ async def create_survey(
     return await storage_repo.save_survey(survey)
 
 
-@router.put("/{survey_id}", response_model=SurveyConfig)
+@router.patch("/{survey_id}", response_model=SurveyConfig)
 async def update_survey(
     survey_id: str,
     payload: SurveyConfigUpdate,
@@ -79,3 +80,68 @@ async def update_survey(
 
     updated_survey = SurveyConfig(**existing_data)
     return await storage_repo.save_survey(updated_survey)
+
+
+@router.delete("/{survey_id}", response_model=SurveyDeleteResponse)
+async def delete_survey(
+    survey_id: str,
+    storage_repo: StorageRepoDep,
+    scheduler_service: SchedulerServiceDep,
+    delete_responses: bool = Query(
+        False,
+        description="Whether to also delete associated response records and uploaded images",
+    ),
+    clean_schedule_references: bool = Query(
+        True,
+        description="Whether to automatically remove references to this survey from sampling rules",
+    ),
+) -> SurveyDeleteResponse:
+    """
+    Admin endpoint to delete a survey JSON definition file.
+    Optionally removes associated response records, uploaded images, and sampling schedule references.
+    """
+    existing = await storage_repo.get_survey(survey_id)
+    if not existing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Survey with id '{survey_id}' not found.",
+        )
+
+    deleted = await storage_repo.delete_survey(survey_id, delete_responses=delete_responses)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Survey with id '{survey_id}' not found.",
+        )
+
+    schedule_references_removed = False
+    if clean_schedule_references:
+        try:
+            schedule_config = await storage_repo.get_schedule_config()
+            original_fixed_count = len(schedule_config.fixed_surveys)
+            original_eligible_count = len(schedule_config.randomized_sampling.eligible_survey_ids)
+
+            schedule_config.fixed_surveys = [
+                fs for fs in schedule_config.fixed_surveys if fs.survey_id != survey_id
+            ]
+            schedule_config.randomized_sampling.eligible_survey_ids = [
+                sid for sid in schedule_config.randomized_sampling.eligible_survey_ids if sid != survey_id
+            ]
+
+            if (
+                len(schedule_config.fixed_surveys) != original_fixed_count
+                or len(schedule_config.randomized_sampling.eligible_survey_ids) != original_eligible_count
+            ):
+                await storage_repo.save_schedule_config(schedule_config)
+                await scheduler_service.schedule_daily_jobs()
+                schedule_references_removed = True
+        except Exception:
+            pass
+
+    return SurveyDeleteResponse(
+        status="deleted",
+        survey_id=survey_id,
+        message=f"Survey '{survey_id}' deleted successfully.",
+        responses_deleted=delete_responses,
+        schedule_references_removed=schedule_references_removed,
+    )

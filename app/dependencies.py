@@ -39,7 +39,6 @@ def get_scheduler_service() -> SchedulerService:
     )
 
 
-# Common type annotations for dependency injection
 StorageRepoDep = Annotated[BaseStorageRepository, Depends(get_storage_repository)]
 DispatcherDep = Annotated[BaseNotificationDispatcher, Depends(get_notification_dispatcher)]
 SchedulerServiceDep = Annotated[SchedulerService, Depends(get_scheduler_service)]

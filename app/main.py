@@ -3,6 +3,8 @@
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+
+lazy import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -22,11 +24,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for startup and shutdown lifecycle management."""
     logger.info("Initializing Simple Surveys Backend service...")
 
-    # Ensure repository and schedule configurations are ready
     repo = get_storage_repository()
     await repo.get_schedule_config()
 
-    # Start notification scheduler
     scheduler = get_scheduler_service()
     scheduler.start()
     try:
@@ -37,7 +37,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Simple Surveys Backend initialized and running.")
     yield
 
-    # Clean shutdown
     logger.info("Shutting down Simple Surveys Backend service...")
     scheduler.shutdown()
     logger.info("Shutdown complete.")
@@ -52,7 +51,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS configuration
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
@@ -61,7 +59,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Register API routers
     app.include_router(api_router)
 
     @app.get("/", tags=["Root"])
@@ -80,8 +77,6 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    import uvicorn
-
     uvicorn.run(
         "app.main:app",
         host=settings.host,

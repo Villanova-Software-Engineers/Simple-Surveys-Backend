@@ -2,6 +2,7 @@
 
 import json
 import re
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
@@ -94,6 +95,25 @@ class FileStorageRepository(BaseStorageRepository):
             except Exception:
                 continue
         return surveys
+
+    async def delete_survey(self, survey_id: str, delete_responses: bool = False) -> bool:
+        """
+        Delete a survey definition file and optionally its responses folder.
+        Returns True if deleted, False if not found.
+        """
+        clean_id = sanitize_filename(survey_id)
+        file_path = self.surveys_dir / f"{clean_id}.json"
+        if not file_path.exists():
+            return False
+
+        await aiofiles.os.remove(file_path)
+
+        if delete_responses:
+            survey_resp_dir = self.responses_dir / clean_id
+            if survey_resp_dir.exists():
+                shutil.rmtree(survey_resp_dir, ignore_errors=True)
+
+        return True
 
     # ---------------- Response Operations ----------------
 

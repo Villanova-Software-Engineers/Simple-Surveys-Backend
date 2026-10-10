@@ -42,7 +42,7 @@
       "question_id": "q_social_context",
       "prompt": "Who is currently with you? (Select all that apply):",
       "type": "multiple_choice",
-      "is_required": false,
+      "is_required": true,
       "validation_rules": {
         "options": [
           "Alone",
