@@ -76,8 +76,8 @@ class BaseStorageRepository(ABC):
 
     # Schedule Configuration
     @abstractmethod
-    async def get_schedule_config(self) -> SamplingRules:
-        """Retrieve the current sampling rules configuration."""
+    async def get_schedule_config(self) -> Optional[SamplingRules]:
+        """Retrieve the current sampling rules configuration, or None if not configured."""
         pass
 
     @abstractmethod

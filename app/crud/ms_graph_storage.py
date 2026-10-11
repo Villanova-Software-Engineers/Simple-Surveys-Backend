@@ -91,7 +91,7 @@ class MSGraphStorageRepository(BaseStorageRepository):
         await self._authenticate()
         raise NotImplementedError("MS Graph get_image_path is scaffolded for future cloud integration.")
 
-    async def get_schedule_config(self) -> SamplingRules:
+    async def get_schedule_config(self) -> Optional[SamplingRules]:
         await self._authenticate()
         raise NotImplementedError("MS Graph get_schedule_config is scaffolded for future cloud integration.")
 

@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import ValidationError
 from starlette.datastructures import UploadFile
 
+from app.config import settings
 from app.crud.file_storage import format_filename_timestamp
 from app.dependencies import SchedulerServiceDep, StorageRepoDep
 from app.schemas.common import ImageMetadata
@@ -119,7 +120,11 @@ async def submit_response(
     received_at = datetime.now(timezone.utc)
 
     schedule_config = await storage_repo.get_schedule_config()
-    time_limit_minutes = schedule_config.time_to_complete_minutes
+    time_limit_minutes = (
+        schedule_config.time_to_complete_minutes
+        if schedule_config
+        else settings.time_to_complete_minutes
+    )
 
     res_status, status_message, is_expired, temporal_markers = (
         scheduler_service.evaluate_response_expiration(

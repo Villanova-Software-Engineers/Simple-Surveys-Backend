@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.config import settings
-from app.dependencies import get_scheduler_service, get_storage_repository
+from app.dependencies import get_scheduler_service
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -24,11 +24,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for startup and shutdown lifecycle management."""
     logger.info("Initializing Simple Surveys Backend service...")
 
-    repo = get_storage_repository()
-    await repo.get_schedule_config()
-
     scheduler = get_scheduler_service()
     scheduler.start()
+
     try:
         await scheduler.schedule_daily_jobs()
     except Exception as e:
