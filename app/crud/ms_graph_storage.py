@@ -56,6 +56,10 @@ class MSGraphStorageRepository(BaseStorageRepository):
         await self._authenticate()
         raise NotImplementedError("MS Graph list_surveys is scaffolded for future cloud integration.")
 
+    async def delete_survey(self, survey_id: str, delete_responses: bool = False) -> bool:
+        await self._authenticate()
+        raise NotImplementedError("MS Graph delete_survey is scaffolded for future cloud integration.")
+
     async def save_response(
         self,
         record: SurveyResponseRecord,
@@ -87,7 +91,7 @@ class MSGraphStorageRepository(BaseStorageRepository):
         await self._authenticate()
         raise NotImplementedError("MS Graph get_image_path is scaffolded for future cloud integration.")
 
-    async def get_schedule_config(self) -> SamplingRules:
+    async def get_schedule_config(self) -> Optional[SamplingRules]:
         await self._authenticate()
         raise NotImplementedError("MS Graph get_schedule_config is scaffolded for future cloud integration.")
 

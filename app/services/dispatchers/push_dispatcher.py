@@ -39,7 +39,6 @@ class PushNotificationDispatcher(BaseNotificationDispatcher):
                 # Dispatches per platform protocol:
                 # - APNs for 'ios'
                 # - FCM for 'android'
-                # - WebPush / VAPID for 'web'
                 logger.debug(
                     "Sending prompt to [%s] token=%s: %s - %s",
                     device.platform,

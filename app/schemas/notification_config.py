@@ -2,10 +2,10 @@
 
 from datetime import datetime
 from typing import List, Literal, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 SamplingMode = Literal["hybrid", "all_random", "all_fixed"]
-DevicePlatform = Literal["ios", "android", "web", "other"]
+DevicePlatform = Literal["ios", "android"]
 
 
 class TimeWindow(BaseModel):
@@ -14,6 +14,14 @@ class TimeWindow(BaseModel):
 
     start_time: str = Field(..., description="Start of window in HH:MM format (e.g. '08:00')")
     end_time: str = Field(..., description="End of window in HH:MM format (e.g. '22:00')")
+
+    @model_validator(mode="after")
+    def validate_window(self):
+        s_parts = [int(p) for p in self.start_time.split(":")]
+        e_parts = [int(p) for p in self.end_time.split(":")]
+        if (e_parts[0], e_parts[1]) <= (s_parts[0], s_parts[1]):
+            raise ValueError(f"end_time '{self.end_time}' must be after start_time '{self.start_time}'")
+        return self
 
 
 class DailyScheduleWindows(BaseModel):

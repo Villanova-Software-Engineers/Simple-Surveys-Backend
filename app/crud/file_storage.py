@@ -1,7 +1,7 @@
 """Local filesystem storage repository implementation."""
 
-import json
 import re
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
@@ -11,12 +11,8 @@ import aiofiles.os
 from app.config import settings
 from app.crud.base import BaseStorageRepository
 from app.schemas.notification_config import (
-    DailyScheduleWindows,
     DeviceRegistration,
-    FixedSurveyConfig,
-    RandomizedSamplingConfig,
     SamplingRules,
-    TimeWindow,
 )
 from app.schemas.survey_config import SurveyConfig
 from app.schemas.survey_response import SurveyResponseRecord
@@ -47,7 +43,7 @@ class FileStorageRepository(BaseStorageRepository):
         self._ensure_directories()
 
     def _ensure_directories(self) -> None:
-        """Create baseline directories if not already existing."""
+        """Create baseline directories once during initialization."""
         for path in [
             self.surveys_dir,
             self.schedule_config_dir,
@@ -60,9 +56,10 @@ class FileStorageRepository(BaseStorageRepository):
 
     async def save_survey(self, survey: SurveyConfig) -> SurveyConfig:
         """Persist survey definition as JSON."""
-        self._ensure_directories()
         clean_id = sanitize_filename(survey.survey_id)
         file_path = self.surveys_dir / f"{clean_id}.json"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
         content = survey.model_dump_json(indent=2)
         async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
             await f.write(content)
@@ -94,6 +91,25 @@ class FileStorageRepository(BaseStorageRepository):
             except Exception:
                 continue
         return surveys
+
+    async def delete_survey(self, survey_id: str, delete_responses: bool = False) -> bool:
+        """
+        Delete a survey definition file and optionally its responses folder.
+        Returns True if deleted, False if not found.
+        """
+        clean_id = sanitize_filename(survey_id)
+        file_path = self.surveys_dir / f"{clean_id}.json"
+        if not file_path.exists():
+            return False
+
+        await aiofiles.os.remove(file_path)
+
+        if delete_responses:
+            survey_resp_dir = self.responses_dir / clean_id
+            if survey_resp_dir.exists():
+                shutil.rmtree(survey_resp_dir, ignore_errors=True)
+
+        return True
 
     # ---------------- Response Operations ----------------
 
@@ -138,7 +154,6 @@ class FileStorageRepository(BaseStorageRepository):
         """Find a response record by response_id inside a survey's data folder."""
         data_dir = self._get_survey_data_dir(survey_id)
         clean_resp_id = sanitize_filename(response_id)
-        # Scan for matching file
         pattern = f"*_{clean_resp_id}.json"
         matching_files = list(data_dir.glob(pattern))
         if not matching_files:
@@ -196,7 +211,6 @@ class FileStorageRepository(BaseStorageRepository):
         if not clean_ext:
             clean_ext = "jpg"
 
-        # Mirror response_id prefix: resp_... becomes img_...
         if response_id.startswith("resp_"):
             img_id = "img_" + response_id[5:]
         else:
@@ -222,39 +236,14 @@ class FileStorageRepository(BaseStorageRepository):
 
     # ---------------- Schedule Configuration ----------------
 
-    def _default_sampling_rules(self) -> SamplingRules:
-        """Create default sampling configuration."""
-        return SamplingRules(
-            mode="hybrid",
-            time_to_complete_minutes=settings.time_to_complete_minutes,
-            daily_schedule=DailyScheduleWindows(
-                overall_window=TimeWindow(start_time="08:00", end_time="22:00"),
-                first_window=TimeWindow(start_time="08:00", end_time="09:30"),
-                last_window=TimeWindow(start_time="20:30", end_time="22:00"),
-            ),
-            fixed_surveys=[
-                FixedSurveyConfig(survey_id="morning_checkin", position="first"),
-                FixedSurveyConfig(survey_id="night_survey", position="last"),
-            ],
-            randomized_sampling=RandomizedSamplingConfig(
-                prompts_per_day=4,
-                min_interval_minutes=90,
-                eligible_survey_ids=[
-                    "comprehensive_sample_survey",
-                    "mood_pulse",
-                    "social_interaction_check",
-                ],
-            ),
-        )
-
-    async def get_schedule_config(self) -> SamplingRules:
-        """Read schedule rules from data/schedule_config/sampling_rules.json."""
-        self._ensure_directories()
+    async def get_schedule_config(self) -> Optional[SamplingRules]:
+        """
+        Read schedule rules from data/schedule_config/sampling_rules.json.
+        Returns None if not configured.
+        """
         config_file = self.schedule_config_dir / "sampling_rules.json"
         if not config_file.exists():
-            default_rules = self._default_sampling_rules()
-            await self.save_schedule_config(default_rules)
-            return default_rules
+            return None
 
         async with aiofiles.open(config_file, "r", encoding="utf-8") as f:
             raw = await f.read()
@@ -262,8 +251,9 @@ class FileStorageRepository(BaseStorageRepository):
 
     async def save_schedule_config(self, config: SamplingRules) -> SamplingRules:
         """Save schedule rules to data/schedule_config/sampling_rules.json."""
-        self._ensure_directories()
         config_file = self.schedule_config_dir / "sampling_rules.json"
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+
         content = config.model_dump_json(indent=2)
         async with aiofiles.open(config_file, "w", encoding="utf-8") as f:
             await f.write(content)
@@ -273,9 +263,10 @@ class FileStorageRepository(BaseStorageRepository):
 
     async def save_device(self, device: DeviceRegistration) -> DeviceRegistration:
         """Save registered device token."""
-        self._ensure_directories()
         clean_token = sanitize_filename(device.device_token)
         device_file = self.devices_dir / f"{clean_token}.json"
+        device_file.parent.mkdir(parents=True, exist_ok=True)
+
         content = device.model_dump_json(indent=2)
         async with aiofiles.open(device_file, "w", encoding="utf-8") as f:
             await f.write(content)

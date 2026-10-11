@@ -6,6 +6,7 @@ from app.schemas.survey_config import (
     SurveyConfig,
     SurveyConfigCreate,
     SurveyConfigUpdate,
+    SurveyDeleteResponse,
     SurveyNotificationPrompt,
 )
 from app.schemas.survey_response import (
@@ -32,6 +33,7 @@ __all__ = [
     "SurveyConfig",
     "SurveyConfigCreate",
     "SurveyConfigUpdate",
+    "SurveyDeleteResponse",
     "SurveyNotificationPrompt",
     "AnswerItem",
     "SurveyResponseCreate",

@@ -27,6 +27,15 @@ class BaseStorageRepository(ABC):
         """List all stored survey definitions."""
         pass
 
+    @abstractmethod
+    async def delete_survey(self, survey_id: str, delete_responses: bool = False) -> bool:
+        """
+        Delete a survey definition by unique ID.
+        Optionally deletes associated responses and media.
+        Returns True if deleted, False if not found.
+        """
+        pass
+
     # Responses
     @abstractmethod
     async def save_response(
@@ -67,8 +76,8 @@ class BaseStorageRepository(ABC):
 
     # Schedule Configuration
     @abstractmethod
-    async def get_schedule_config(self) -> SamplingRules:
-        """Retrieve the current sampling rules configuration."""
+    async def get_schedule_config(self) -> Optional[SamplingRules]:
+        """Retrieve the current sampling rules configuration, or None if not configured."""
         pass
 
     @abstractmethod

@@ -109,3 +109,14 @@ class SurveyConfigUpdate(BaseModel):
 class SurveyConfig(SurveyConfigBase):
     """Complete survey configuration model."""
     pass
+
+
+class SurveyDeleteResponse(BaseModel):
+    """Acknowledgement returned on survey deletion."""
+    model_config = ConfigDict(extra="ignore")
+
+    status: str = Field("deleted", description="Deletion status")
+    survey_id: str = Field(..., description="Deleted survey identifier")
+    message: str = Field(..., description="Confirmation message")
+    responses_deleted: bool = Field(False, description="Whether associated responses were purged")
+    schedule_references_removed: bool = Field(False, description="Whether references in sampling rules were removed")

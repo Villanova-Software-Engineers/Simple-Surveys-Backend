@@ -10,10 +10,10 @@ from pydantic import BaseModel, ConfigDict
 
 from app.config import settings
 from app.crud.base import BaseStorageRepository
-from app.schemas.notification_config import FixedSurveyConfig, SamplingRules
+from app.schemas.notification_config import SamplingRules
 from app.schemas.survey_config import SurveyConfig
-from app.schemas.survey_response import SurveyResponseCreate, SurveyResponseRecord
-from app.schemas.common import ImageMetadata, TemporalMarkers
+from app.schemas.survey_response import SurveyResponseCreate
+from app.schemas.common import TemporalMarkers
 from app.services.dispatchers.base import BaseNotificationDispatcher
 from app.services.survey_selector import SurveySelector
 
@@ -40,7 +40,7 @@ def random_time_between(start_dt: datetime, end_dt: datetime) -> datetime:
     """Generate uniform random datetime between start_dt and end_dt."""
     delta = (end_dt - start_dt).total_seconds()
     if delta <= 0:
-        return start_dt
+        raise ValueError(f"end_time '{end_dt}' must be after start_time '{start_dt}'")
     rand_secs = random.uniform(0, delta)
     return start_dt + timedelta(seconds=rand_secs)
 
@@ -73,26 +73,26 @@ class SchedulerService:
         2. Fixed 'last' survey: randomized within last_window (or explicit scheduled_time)
         3. Intraday randomized surveys: placed between first and last dispatches, enforcing min_interval_minutes
         """
-        if rules is None:
-            rules = await self.repository.get_schedule_config()
+        rules = rules or await self.repository.get_schedule_config()
+        if not rules:
+            logger.info("No sampling rules configured. Skipping dispatch calculation.")
+            return []
+
         if target_date is None:
             target_date = datetime.now(self.tz).date()
 
         dispatches: List[ScheduledDispatch] = []
 
-        # Overall window bounds
         overall_start_t = parse_time_str(rules.daily_schedule.overall_window.start_time)
         overall_end_t = parse_time_str(rules.daily_schedule.overall_window.end_time)
         overall_start = datetime.combine(target_date, overall_start_t, tzinfo=self.tz)
         overall_end = datetime.combine(target_date, overall_end_t, tzinfo=self.tz)
 
-        # First window bounds
         first_start_t = parse_time_str(rules.daily_schedule.first_window.start_time)
         first_end_t = parse_time_str(rules.daily_schedule.first_window.end_time)
         first_win_start = datetime.combine(target_date, first_start_t, tzinfo=self.tz)
         first_win_end = datetime.combine(target_date, first_end_t, tzinfo=self.tz)
 
-        # Last window bounds
         last_start_t = parse_time_str(rules.daily_schedule.last_window.start_time)
         last_end_t = parse_time_str(rules.daily_schedule.last_window.end_time)
         last_win_start = datetime.combine(target_date, last_start_t, tzinfo=self.tz)
@@ -102,7 +102,6 @@ class SchedulerService:
         last_dispatch_dt: Optional[datetime] = None
 
         if rules.mode in ["hybrid", "all_fixed"]:
-            # Process fixed surveys
             for fixed in rules.fixed_surveys:
                 if fixed.position == "first":
                     if fixed.scheduled_time:
@@ -139,7 +138,6 @@ class SchedulerService:
                     )
 
                 elif fixed.scheduled_time:
-                    # Fixed survey at explicit time without first/last position
                     t = parse_time_str(fixed.scheduled_time)
                     dispatch_dt = datetime.combine(target_date, t, tzinfo=self.tz)
                     dispatches.append(
@@ -150,7 +148,6 @@ class SchedulerService:
                         )
                     )
 
-        # Determine interval for randomized prompts
         if rules.mode in ["hybrid", "all_random"]:
             rand_start = first_dispatch_dt or overall_start
             rand_end = last_dispatch_dt or overall_end
@@ -158,9 +155,7 @@ class SchedulerService:
             prompts_needed = rules.randomized_sampling.prompts_per_day
             min_interval = timedelta(minutes=rules.randomized_sampling.min_interval_minutes)
 
-            # Available middle span
             if rand_end > rand_start + min_interval:
-                # Place prompts_needed random timestamps ensuring min_interval
                 sampled_times = self._sample_intraday_slots(
                     start_dt=rand_start,
                     end_dt=rand_end,
@@ -176,7 +171,6 @@ class SchedulerService:
                         )
                     )
 
-        # Sort all dispatches chronologically
         dispatches.sort(key=lambda d: d.dispatch_time)
         return dispatches
 
@@ -211,7 +205,6 @@ class SchedulerService:
             sub_start = start_dt + timedelta(seconds=i * slot_size)
             sub_end = start_dt + timedelta(seconds=(i + 1) * slot_size)
             
-            # Ensure at least min_secs from last_dt
             earliest = max(sub_start, last_dt + min_interval)
             latest = sub_end - timedelta(seconds=1)
 
@@ -228,6 +221,10 @@ class SchedulerService:
     async def execute_dispatch(self, dispatch: ScheduledDispatch) -> None:
         """Execute a scheduled notification dispatch event."""
         rules = await self.repository.get_schedule_config()
+        if not rules:
+            logger.warning("No sampling rules configured. Skipping dispatch execution.")
+            return
+
         survey: Optional[SurveyConfig] = None
 
         if dispatch.is_random_pool or not dispatch.survey_id:
@@ -252,7 +249,12 @@ class SchedulerService:
 
     async def schedule_daily_jobs(self) -> None:
         """Compute today's plan and register APScheduler trigger jobs."""
-        plan = await self.calculate_daily_dispatch_plan()
+        rules = await self.repository.get_schedule_config()
+        if not rules:
+            logger.info("No sampling rules configured. Waiting for configuration via API before scheduling dispatches.")
+            return
+
+        plan = await self.calculate_daily_dispatch_plan(rules=rules)
         now = datetime.now(self.tz)
 
         logger.info("Scheduling %d daily dispatches for today", len(plan))
@@ -290,12 +292,10 @@ class SchedulerService:
         if received_at is None:
             received_at = datetime.now(timezone.utc)
 
-        # Ensure notification_sent_at has timezone
         sent_at = submission.notification_sent_at
         if sent_at.tzinfo is None:
             sent_at = sent_at.replace(tzinfo=timezone.utc)
 
-        # Delta t calculation
         latency_secs = max(0.0, (received_at - sent_at).total_seconds())
 
         duration_secs: Optional[float] = None
@@ -333,7 +333,6 @@ class SchedulerService:
     def start(self) -> None:
         """Start the background scheduler."""
         if not self.scheduler.running:
-            # Recurring midnight job to calculate daily dispatches
             self.scheduler.add_job(
                 self.schedule_daily_jobs,
                 trigger="cron",

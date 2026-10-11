@@ -38,7 +38,6 @@ class SurveySelector:
             survey = await self.repository.get_survey(sid)
             if survey and survey.is_active:
                 candidates.append(survey)
-                # Weights must be positive numbers
                 w = max(0.001, float(survey.weight))
                 weights.append(w)
 

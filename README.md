@@ -52,7 +52,7 @@ Simple-Surveys-Backend/
 ## Setup & Running
 
 ### 1. Prerequisites
-- Python 3.10+ (tested with Python 3.15)
+- Python 3.15+
 - Virtual environment recommended
 
 ### 2. Installation
@@ -79,6 +79,7 @@ cp .env.example .env
 ```
 
 Configuration variables:
+
 | Variable | Default | Description |
 |---|---|---|
 | `HOST` | `0.0.0.0` | Host address to bind |
@@ -92,7 +93,7 @@ Configuration variables:
 
 ### 4. Running the Server
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python -m app.main
 ```
 
 Once running:
@@ -111,7 +112,8 @@ Once running:
 - `GET /api/surveys`: Retrieve all active surveys (`?active_only=true|false`).
 - `GET /api/surveys/{survey_id}`: Retrieve a specific survey definition.
 - `POST /api/surveys`: Create and persist a new survey definition (`201 Created`).
-- `PUT /api/surveys/{survey_id}`: Update an existing survey definition (`200 OK`).
+- `PATCH /api/surveys/{survey_id}`: Update an existing survey definition (`200 OK`).
+- `DELETE /api/surveys/{survey_id}`: Delete a survey definition (`200 OK`). Supports optional `delete_responses=true|false` and `clean_schedule_references=true|false`.
 
 ### Response Ingestion
 - `POST /api/responses`: Submit survey answers and optional camera photo.
