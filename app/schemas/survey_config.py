@@ -119,4 +119,7 @@ class SurveyDeleteResponse(BaseModel):
     survey_id: str = Field(..., description="Deleted survey identifier")
     message: str = Field(..., description="Confirmation message")
     responses_deleted: bool = Field(False, description="Whether associated responses were purged")
-    schedule_references_removed: bool = Field(False, description="Whether references in sampling rules were removed")
+    schedule_references_cleaned: bool = Field(
+        False,
+        description="Whether sampling rules are clean (True if removed or none existed, False if an error occurred)"
+    )

@@ -76,6 +76,15 @@ class MSGraphStorageRepository(BaseStorageRepository):
         await self._authenticate()
         raise NotImplementedError("MS Graph list_responses is scaffolded for future cloud integration.")
 
+    async def delete_response(
+        self,
+        survey_id: str,
+        response_id: str,
+        delete_image: bool = True
+    ) -> bool:
+        await self._authenticate()
+        raise NotImplementedError("MS Graph delete_response is scaffolded for future cloud integration.")
+
     async def save_image(
         self,
         survey_id: str,
@@ -106,3 +115,11 @@ class MSGraphStorageRepository(BaseStorageRepository):
     async def list_devices(self) -> List[DeviceRegistration]:
         await self._authenticate()
         raise NotImplementedError("MS Graph list_devices is scaffolded for future cloud integration.")
+
+    async def get_device(self, device_token: str) -> Optional[DeviceRegistration]:
+        await self._authenticate()
+        raise NotImplementedError("MS Graph get_device is scaffolded for future cloud integration.")
+
+    async def delete_device(self, device_token: str) -> bool:
+        await self._authenticate()
+        raise NotImplementedError("MS Graph delete_device is scaffolded for future cloud integration.")

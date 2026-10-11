@@ -55,3 +55,14 @@ class SurveyResponseSubmissionResult(BaseModel):
     image_stored: bool = Field(False, description="Whether an uploaded image was persisted")
     image_filename: Optional[str] = Field(None, description="Persisted image filename if stored")
     received_at: datetime = Field(..., description="Timestamp when server received submission")
+
+
+class ResponseDeleteResponse(BaseModel):
+    """Acknowledgement returned on response deletion."""
+    model_config = ConfigDict(extra="ignore")
+
+    status: str = Field("deleted", description="Deletion status")
+    survey_id: str = Field(..., description="Survey identifier")
+    response_id: str = Field(..., description="Deleted response identifier")
+    message: str = Field(..., description="Confirmation message")
+    image_deleted: bool = Field(False, description="Whether associated image was also deleted")

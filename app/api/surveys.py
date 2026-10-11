@@ -114,34 +114,35 @@ async def delete_survey(
             detail=f"Survey with id '{survey_id}' not found.",
         )
 
-    schedule_references_removed = False
+
+    schedule_references_cleaned = False
     if clean_schedule_references:
         try:
             schedule_config = await storage_repo.get_schedule_config()
-            original_fixed_count = len(schedule_config.fixed_surveys)
-            original_eligible_count = len(schedule_config.randomized_sampling.eligible_survey_ids)
+            if schedule_config is None:
+                schedule_references_cleaned = True
+            else:
+                fixed_survey_ids = {fs.survey_id for fs in schedule_config.fixed_surveys}
+                eligible_survey_ids = {rs_id for rs_id in schedule_config.randomized_sampling.eligible_survey_ids}
 
-            schedule_config.fixed_surveys = [
-                fs for fs in schedule_config.fixed_surveys if fs.survey_id != survey_id
-            ]
-            schedule_config.randomized_sampling.eligible_survey_ids = [
-                sid for sid in schedule_config.randomized_sampling.eligible_survey_ids if sid != survey_id
-            ]
+                if (survey_id in fixed_survey_ids) or (survey_id in eligible_survey_ids):
+                    schedule_config.fixed_surveys = [
+                        fs for fs in schedule_config.fixed_surveys if fs.survey_id != survey_id
+                    ]
+                    schedule_config.randomized_sampling.eligible_survey_ids = [
+                        sid for sid in schedule_config.randomized_sampling.eligible_survey_ids if sid != survey_id
+                    ]
+                    await storage_repo.save_schedule_config(schedule_config)
+                    await scheduler_service.schedule_daily_jobs()
 
-            if (
-                len(schedule_config.fixed_surveys) != original_fixed_count
-                or len(schedule_config.randomized_sampling.eligible_survey_ids) != original_eligible_count
-            ):
-                await storage_repo.save_schedule_config(schedule_config)
-                await scheduler_service.schedule_daily_jobs()
-                schedule_references_removed = True
+                schedule_references_cleaned = True
         except Exception:
-            pass
+            schedule_references_cleaned = False
 
     return SurveyDeleteResponse(
         status="deleted",
         survey_id=survey_id,
         message=f"Survey '{survey_id}' deleted successfully.",
         responses_deleted=delete_responses,
-        schedule_references_removed=schedule_references_removed,
+        schedule_references_cleaned=schedule_references_cleaned,
     )

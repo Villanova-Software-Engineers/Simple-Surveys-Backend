@@ -85,7 +85,7 @@ class DeviceRegistration(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     device_token: str = Field(..., description="Unique push notification device token")
-    platform: DevicePlatform = Field("ios", description="Operating system platform ('ios', 'android', 'web')")
+    platform: DevicePlatform = Field("ios", description="Operating system platform ('ios', 'android')")
     timezone: str = Field("America/New_York", description="Device timezone string")
     registered_at: Optional[datetime] = Field(
         default_factory=lambda: datetime.now().astimezone(),
@@ -99,3 +99,12 @@ class DeviceRegistrationResponse(BaseModel):
 
     status: str = Field("registered", description="Registration status")
     device_token: str = Field(..., description="Registered device token")
+
+
+class DeviceDeleteResponse(BaseModel):
+    """Acknowledgement returned on device deletion."""
+    model_config = ConfigDict(extra="ignore")
+
+    status: str = Field("deleted", description="Deletion status")
+    device_token: str = Field(..., description="Deleted device token")
+    message: str = Field(..., description="Confirmation message")

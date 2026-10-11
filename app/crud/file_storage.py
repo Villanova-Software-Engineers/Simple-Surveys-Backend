@@ -35,10 +35,10 @@ class FileStorageRepository(BaseStorageRepository):
 
     def __init__(self, data_dir: Optional[Path] = None):
         self.data_dir = data_dir or settings.data_dir
-        self.surveys_dir = self.data_dir / "surveys"
-        self.schedule_config_dir = self.data_dir / "schedule_config"
-        self.responses_dir = self.data_dir / "responses"
-        self.devices_dir = self.data_dir / "devices"
+        self.surveys_dir = settings.surveys_dir
+        self.schedule_config_dir = settings.schedule_config_dir
+        self.responses_dir = settings.responses_dir
+        self.devices_dir = settings.devices_dir
 
         self._ensure_directories()
 
@@ -193,6 +193,42 @@ class FileStorageRepository(BaseStorageRepository):
 
         return results
 
+    async def delete_response(
+        self,
+        survey_id: str,
+        response_id: str,
+        delete_image: bool = True
+    ) -> bool:
+        """
+        Delete a response record and optionally its associated image.
+        Returns True if deleted, False if not found.
+        """
+        data_dir = self._get_survey_data_dir(survey_id)
+        clean_resp_id = sanitize_filename(response_id)
+        pattern = f"*_{clean_resp_id}.json"
+        matching_files = list(data_dir.glob(pattern))
+        if not matching_files:
+            direct = data_dir / f"{clean_resp_id}.json"
+            if direct.exists():
+                matching_files = [direct]
+            else:
+                return False
+
+        if delete_image:
+            try:
+                async with aiofiles.open(matching_files[0], "r", encoding="utf-8") as f:
+                    raw = await f.read()
+                record = SurveyResponseRecord.model_validate_json(raw)
+                if record.image and record.image.image_filename:
+                    img_path = await self.get_image_path(survey_id, record.image.image_filename)
+                    if img_path and img_path.exists():
+                        await aiofiles.os.remove(img_path)
+            except Exception:
+                pass
+
+        await aiofiles.os.remove(matching_files[0])
+        return True
+
     # ---------------- Image Operations ----------------
 
     async def save_image(
@@ -286,3 +322,26 @@ class FileStorageRepository(BaseStorageRepository):
             except Exception:
                 continue
         return devices
+
+    async def get_device(self, device_token: str) -> Optional[DeviceRegistration]:
+        """Retrieve a registered device by token."""
+        clean_token = sanitize_filename(device_token)
+        device_file = self.devices_dir / f"{clean_token}.json"
+        if not device_file.exists():
+            return None
+        async with aiofiles.open(device_file, "r", encoding="utf-8") as f:
+            raw = await f.read()
+        return DeviceRegistration.model_validate_json(raw)
+
+    async def delete_device(self, device_token: str) -> bool:
+        """
+        Delete a registered device by token.
+        Returns True if deleted, False if not found.
+        """
+        clean_token = sanitize_filename(device_token)
+        device_file = self.devices_dir / f"{clean_token}.json"
+        if not device_file.exists():
+            return False
+
+        await aiofiles.os.remove(device_file)
+        return True
