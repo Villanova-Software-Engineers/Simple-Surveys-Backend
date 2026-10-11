@@ -15,6 +15,7 @@ from app.crud.file_storage import format_filename_timestamp
 from app.dependencies import SchedulerServiceDep, StorageRepoDep
 from app.schemas.common import ImageMetadata
 from app.schemas.survey_response import (
+    ResponseDeleteResponse,
     SurveyResponseCreate,
     SurveyResponseRecord,
     SurveyResponseSubmissionResult,
@@ -28,7 +29,17 @@ async def list_responses(
     storage_repo: StorageRepoDep,
     survey_id: Optional[str] = Query(None, description="Optional survey_id filter"),
 ) -> List[SurveyResponseRecord]:
-    """Retrieve persisted response records."""
+    """
+    Retrieve persisted response records.
+    If survey_id filter is provided, verifies that the survey exists.
+    """
+    if survey_id is not None:
+        survey = await storage_repo.get_survey(survey_id)
+        if not survey:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Survey '{survey_id}' does not exist.",
+            )
     return await storage_repo.list_responses(survey_id=survey_id)
 
 
@@ -46,6 +57,50 @@ async def get_response(
             detail=f"Response '{response_id}' for survey '{survey_id}' not found.",
         )
     return record
+
+
+@router.delete("/{survey_id}/{response_id}", response_model=ResponseDeleteResponse)
+async def delete_response(
+    survey_id: str,
+    response_id: str,
+    storage_repo: StorageRepoDep,
+    delete_image: bool = Query(
+        True,
+        description="Whether to also delete any associated uploaded photo",
+    ),
+) -> ResponseDeleteResponse:
+    """
+    Delete a specific survey response record and optionally its associated photo.
+    """
+    survey = await storage_repo.get_survey(survey_id)
+    if not survey:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Survey '{survey_id}' does not exist.",
+        )
+
+    record = await storage_repo.get_response(survey_id, response_id)
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Response '{response_id}' for survey '{survey_id}' not found.",
+        )
+
+    had_image = bool(record.image and record.image.has_image and record.image.image_filename)
+    deleted = await storage_repo.delete_response(survey_id, response_id, delete_image=delete_image)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Response '{response_id}' for survey '{survey_id}' not found.",
+        )
+
+    return ResponseDeleteResponse(
+        status="deleted",
+        survey_id=survey_id,
+        response_id=response_id,
+        message=f"Response '{response_id}' for survey '{survey_id}' deleted successfully.",
+        image_deleted=had_image and delete_image,
+    )
 
 
 @router.get("/{survey_id}/images/{filename}")

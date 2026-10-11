@@ -53,7 +53,6 @@ Simple-Surveys-Backend/
 
 ### 1. Prerequisites
 - Python 3.15+
-- Virtual environment recommended
 
 ### 2. Installation
 ```bash
@@ -122,10 +121,12 @@ Once running:
   - Returns `200 OK` with status `"EXPIRED"` and empty answers if submitted beyond `time_to_complete_minutes`.
 - `GET /api/responses`: Retrieve persisted response records (`?survey_id={id}`).
 - `GET /api/responses/{survey_id}/{response_id}`: Retrieve a specific response.
+- `DELETE /api/responses/{survey_id}/{response_id}`: Delete a response record and optionally its associated photo (`?delete_image=true|false`).
 - `GET /api/responses/{survey_id}/images/{filename}`: Download an uploaded response image.
 
 ### Notification Scheduling & Devices
 - `GET /api/notifications/schedule`: Retrieve active sampling rules (`sampling_rules.json`).
-- `PUT /api/notifications/schedule`: Update sampling rules and refresh daily schedule.
+- `POST /api/notifications/schedule`: Create or update (upsert) daily sampling rules and refresh daily schedule.
 - `POST /api/notifications/devices`: Register an anonymous device push notification token.
 - `GET /api/notifications/devices`: List registered devices.
+- `DELETE /api/notifications/devices/{device_token}`: Unregister and delete a device token, stopping future notifications.

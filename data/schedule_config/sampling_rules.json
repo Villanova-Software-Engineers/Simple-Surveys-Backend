@@ -17,23 +17,16 @@
   },
   "fixed_surveys": [
     {
-      "survey_id": "morning_checkin",
+      "survey_id": "comprehensive_sample_survey",
       "position": "first",
-      "scheduled_time": null
-    },
-    {
-      "survey_id": "night_survey",
-      "position": "last",
       "scheduled_time": null
     }
   ],
   "randomized_sampling": {
-    "prompts_per_day": 2,
-    "min_interval_minutes": 90,
+    "prompts_per_day": 3,
+    "min_interval_minutes": 60,
     "eligible_survey_ids": [
-      "comprehensive_sample_survey",
-      "mood_pulse",
-      "social_interaction_check"
+      "comprehensive_sample_survey"
     ]
   }
 }

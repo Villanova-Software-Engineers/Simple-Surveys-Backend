@@ -4,6 +4,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException, status
 from app.dependencies import SchedulerServiceDep, StorageRepoDep
 from app.schemas.notification_config import (
+    DeviceDeleteResponse,
     DeviceRegistration,
     DeviceRegistrationResponse,
     SamplingRules,
@@ -21,7 +22,7 @@ async def get_schedule(
     if not schedule:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Sampling rules have not been configured yet. Please configure via PUT /api/notifications/schedule.",
+            detail="Sampling rules have not been configured yet. Please configure via POST /api/notifications/schedule.",
         )
     return schedule
 
@@ -49,14 +50,37 @@ async def register_device(
     )
 
 
-@router.put("/schedule", response_model=SamplingRules)
-async def update_schedule(
+@router.delete("/devices/{device_token}", response_model=DeviceDeleteResponse)
+async def delete_device(
+    device_token: str,
+    storage_repo: StorageRepoDep,
+) -> DeviceDeleteResponse:
+    """
+    Unregister and delete a device push token.
+    Clears its registration so it no longer receives scheduled survey notifications.
+    """
+    device = await storage_repo.get_device(device_token)
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Device token '{device_token}' not found.",
+        )
+    await storage_repo.delete_device(device_token)
+    return DeviceDeleteResponse(
+        status="deleted",
+        device_token=device_token,
+        message="Device token unregistered and deleted successfully.",
+    )
+
+
+@router.post("/schedule", response_model=SamplingRules)
+async def set_schedule(
     payload: SamplingRules,
     storage_repo: StorageRepoDep,
     scheduler_service: SchedulerServiceDep,
 ) -> SamplingRules:
     """
-    Admin endpoint to update daily sampling rules.
+    Admin endpoint to create or update (upsert) daily sampling rules.
     Validates that all referenced survey IDs exist before persisting.
     Immediately recalculates and re-registers daily scheduler jobs.
     """
@@ -79,6 +103,5 @@ async def update_schedule(
         )
 
     updated_rules = await storage_repo.save_schedule_config(payload)
-    # Refresh scheduled jobs for today
     await scheduler_service.schedule_daily_jobs()
     return updated_rules

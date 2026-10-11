@@ -11,12 +11,14 @@ from app.schemas.survey_config import (
 )
 from app.schemas.survey_response import (
     AnswerItem,
+    ResponseDeleteResponse,
     SurveyResponseCreate,
     SurveyResponseRecord,
     SurveyResponseSubmissionResult,
 )
 from app.schemas.notification_config import (
     DailyScheduleWindows,
+    DeviceDeleteResponse,
     DeviceRegistration,
     DeviceRegistrationResponse,
     FixedSurveyConfig,
@@ -36,6 +38,7 @@ __all__ = [
     "SurveyDeleteResponse",
     "SurveyNotificationPrompt",
     "AnswerItem",
+    "ResponseDeleteResponse",
     "SurveyResponseCreate",
     "SurveyResponseRecord",
     "SurveyResponseSubmissionResult",
@@ -44,6 +47,7 @@ __all__ = [
     "FixedSurveyConfig",
     "RandomizedSamplingConfig",
     "SamplingRules",
+    "DeviceDeleteResponse",
     "DeviceRegistration",
     "DeviceRegistrationResponse",
 ]

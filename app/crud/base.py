@@ -56,6 +56,19 @@ class BaseStorageRepository(ABC):
         """List response records, optionally filtered by survey_id."""
         pass
 
+    @abstractmethod
+    async def delete_response(
+        self,
+        survey_id: str,
+        response_id: str,
+        delete_image: bool = True
+    ) -> bool:
+        """
+        Delete a response record JSON and optionally its associated image.
+        Returns True if deleted, False if not found.
+        """
+        pass
+
     # Media / Images
     @abstractmethod
     async def save_image(
@@ -94,4 +107,17 @@ class BaseStorageRepository(ABC):
     @abstractmethod
     async def list_devices(self) -> List[DeviceRegistration]:
         """List all registered devices."""
+        pass
+
+    @abstractmethod
+    async def get_device(self, device_token: str) -> Optional[DeviceRegistration]:
+        """Retrieve a registered device by token."""
+        pass
+
+    @abstractmethod
+    async def delete_device(self, device_token: str) -> bool:
+        """
+        Delete a registered device by token.
+        Returns True if deleted, False if not found.
+        """
         pass
